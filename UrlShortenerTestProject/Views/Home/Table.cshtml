@@ -1,0 +1,139 @@
+﻿@model IEnumerable<UrlShortenerTestProject.Models.ShortenedUrl>
+@using Microsoft.AspNetCore.Authorization
+@inject IAuthorizationService AuthorizationService
+@{
+    ViewData["Title"] = "Таблиця";
+}
+@{
+    var isAdmin = (await AuthorizationService.AuthorizeAsync(User, "Admin")).Succeeded;
+    var isAuthenticated = User.Identity.IsAuthenticated;
+}
+
+<head>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+</head>
+<div class="container mt-4">
+    <h2>Таблиця скорочених посилань</h2>
+    @if (isAuthenticated)
+    {
+        <div class="mb-2">
+            <input type="text" id="originalUrl" class="form-control mb-2" placeholder="Введіть оригінальну URL">
+            <div class="mb-2 d-flex justify-content-between ">
+                   <button id="addRow" class="btn btn-primary">Скоротити посилання</button>
+            @if (isAdmin)
+            {
+                <button type="submit" class="text-end btn btn-danger deleteAll">Очистити таблицю</button>
+            }
+            </div>
+        </div>
+    }
+    <table id="UrlTable" class="table table-striped table-bordered">
+        <thead>
+            <tr>
+                <th class="text-center fixed-width">Оригінальне посилання</th>
+                <th class="text-center ">Коротке посилання</th>
+                @if (isAuthenticated)
+                {
+                    <th>Actions</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr data-id="@item.Id">
+                    <td class="fixed-width">@item.OriginalUrl</td>
+                    <td>
+                        <a href="@($"{Context.Request.Scheme}://{Context.Request.Host}/{item.ShortCode}")" target="_blank">
+                            @($"{Context.Request.Scheme}://{Context.Request.Host}/{item.ShortCode}")
+                        </a>
+                    </td>
+                    @if (isAuthenticated)
+                    {
+                        <td>
+                            <a class="btn btn-info" asp-controller="Home" asp-action="Details" asp-route-id="@item.Id">Деталі</a>
+
+                            @if (isAdmin || item.CreatedBy == User.Identity.Name)
+                            {
+                               <button type="submit" class="btn btn-danger delete">Видалити</button>
+                            }
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+<script>
+    $(document).ready(function () {
+        $("#addRow").click(function () {
+            let originalUrl = $("#originalUrl").val();
+
+            if (originalUrl === "") {
+                alert("Будь ласка, введіть URL!");
+                return;
+            }
+
+            $.ajax({
+                url: "/Home/ShortenUrlFromTable",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ originalUrl: originalUrl }),
+                success: function (response) {
+                    let newRow = `
+                        <tr data-id="${response.id}">
+                            <td class="fixed-width">${response.originalUrl}</td>
+                            <td><a href="${response.shortUrl}" target="_blank">${response.shortUrl}</a></td>
+                                <td>
+                                        <a class="btn btn-info" href="/Home/Details/${response.id}">Деталі</a>
+                                    <button type="submit" class="btn btn-danger delete">Видалити</button>
+                                </td>
+                        </tr>
+                    `;
+
+                    $("#UrlTable tbody").append(newRow);
+                    $("#originalUrl").val(""); // Очищаємо поле
+                },
+                error: function (xhr) {
+                    let errorMessage = xhr.responseJSON?.error || "Сталася помилка при додаванні URL!";
+                    alert(errorMessage);
+                }
+            });
+        });
+    });
+    $(document).on('click', '.delete', function () {
+        var row = $(this).closest('tr'); // Отримуємо поточний рядок
+        var id = row.attr('data-id'); // Отримуємо ID з атрибуту рядка
+        if (confirm('Ви впевнені, що хочете видалити цей запис?')) {
+            // Підтвердження видалення та виклик AJAX-запиту
+            $.ajax({
+                url: '@Url.Action("Delete", "Home")/' + id, // Виклик контролера для видалення
+                type: 'POST',
+                success: function (response) {
+                    if (response.success) {
+                        row.remove(); // Якщо видалення успішне, видаляємо рядок з таблиці
+                    } else {
+                        alert('Error deleting record: ' + response.errorMessage); // Повідомлення про помилку
+                    }
+                }
+            });
+        }
+    });
+
+    $(document).on('click', '.deleteAll', function () {
+        if (confirm('Ви впевнені, що хочете видалити всі записи?')) {
+            // Підтвердження видалення та виклик AJAX-запиту
+            $.ajax({
+                url: '@Url.Action("DeleteAll", "Home")', // Виклик контролера для видалення
+                type: 'POST',
+                success: function (response) {
+                    if (response.success) {
+                        $("#UrlTable tbody").empty(); // Якщо видалення успішне, видаляємо таблицю
+                    } else {
+                        alert('Error deleting table: ' + response.errorMessage); // Повідомлення про помилку
+                    }
+                }
+            });
+        }
+    });
+</script>

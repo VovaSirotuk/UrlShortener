@@ -1,0 +1,28 @@
+﻿@model UrlShortenerTestProject.Models.ShortenedUrl
+
+@{
+    ViewData["Title"] = "Скорочення посилання";
+}
+
+<h2>Скоротити посилання</h2>
+
+<form asp-action="index" asp-controller="Home" method="post">
+    <div class="form-group">
+        <label for="originalUrl">Введіть URL:</label>
+        <input type="url" id="originalUrl" name="OriginalUrl" class="form-control" required />
+    </div>
+    <!-- Передаємо користувача -->
+    <input type="hidden" name="CreatedBy" value="@User.Identity.Name" />
+    <button type="submit" class="btn btn-primary mt-2">Скоротити</button>
+</form>
+
+@if (Model != null && !string.IsNullOrEmpty(Model.ShortCode))
+{
+    <div class="mt-4 alert alert-success">
+        <p>Скорочене посилання:</p>
+        <a href="@($"{Context.Request.Scheme}://{Context.Request.Host}/{Model.ShortCode}")" target="_blank">
+            @($"{Context.Request.Scheme}://{Context.Request.Host}/{Model.ShortCode}")
+        </a>
+    </div>
+}
+

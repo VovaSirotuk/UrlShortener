@@ -1,0 +1,26 @@
+﻿    @model string
+    @using Microsoft.AspNetCore.Authorization
+    @inject IAuthorizationService AuthorizationService
+
+    @{
+        ViewData["Title"] = "About";
+    }
+
+    <h2>About</h2>
+    <p><br>@Model</p>
+
+    <br>
+    <br>
+    @{
+        var isAdmin = (await AuthorizationService.AuthorizeAsync(User, "Admin")).Succeeded;
+    }
+
+    @if (isAdmin)
+    {
+        <form method="post" asp-controller="About" asp-action="Update">
+            <div class="mb-3">
+                <textarea name="newDescription" class="form-control">@Model</textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Update</button>
+        </form>
+    }

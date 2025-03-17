@@ -127,6 +127,24 @@ namespace UrlShortenerTests
             var json = result.Value; // Не змінюємо тип
             Assert.True((bool)json.GetType().GetProperty("success")?.GetValue(json, null));
         }
+
+        [Fact]
+        public async Task Details_ValidId_ReturnsViewWithModel()
+        {
+            // Arrange
+            var testUrl = new ShortenedUrl { Id = 1, OriginalUrl = "https://example.com", ShortCode = "abc123" };
+            _mockUrlService.Setup(service => service.GetByIdAsync(1)).ReturnsAsync(testUrl);
+
+            // Act
+            var result = await _controller.Details(1);
+
+            // Assert
+            var viewResult = Assert.IsType<ViewResult>(result);  // Очікуємо ViewResult
+            Assert.NotNull(viewResult.Model);  // Переконуємось, що модель не null
+            var model = Assert.IsType<ShortenedUrl>(viewResult.Model);  // Перевіряємо тип моделі
+            Assert.Equal("https://example.com", model.OriginalUrl);
+            Assert.Equal("abc123", model.ShortCode);
+        }
     }
 }
 
